@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    notenrechner_lib::run()
+    sekai_lib::run()
 }
