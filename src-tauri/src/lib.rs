@@ -64,6 +64,7 @@ fn geld_path(app: &tauri::AppHandle) -> std::path::PathBuf {
     app.path()
         .app_local_data_dir()
         .expect("no app local data dir")
+        .join("sekai")
         .join("geld_data.json")
 }
 
@@ -121,6 +122,7 @@ fn data_path(app: &tauri::AppHandle) -> std::path::PathBuf {
     app.path()
         .app_local_data_dir()
         .expect("no app local data dir")
+        .join("sekai")
         .join("noten_data.json")
 }
 
@@ -175,11 +177,41 @@ fn export_csv(data: AppData) -> String {
     "\u{FEFF}".to_string() + &rows.join("\n")
 }
 
+#[tauri::command]
+async fn check_for_updates(app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    match app.updater() {
+        Ok(updater) => match updater.check().await {
+            Ok(Some(_)) => Ok(true),
+            Ok(None) => Ok(false),
+            Err(e) => Err(e.to_string()),
+        },
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let updater = app.updater().map_err(|e| e.to_string())?;
+    if let Some(update) = updater.check().await.map_err(|e| e.to_string())? {
+        update.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+        app.restart();
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![load_data, save_data, export_csv, load_geld_data, save_geld_data, export_geld_csv])
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .invoke_handler(tauri::generate_handler![
+            load_data, save_data, export_csv,
+            load_geld_data, save_geld_data, export_geld_csv,
+            check_for_updates, install_update
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

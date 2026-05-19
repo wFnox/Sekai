@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export type Theme = "silk" | "dark" | "gruvbox";
+export type Theme = "silk" | "dark" | "gruvbox" | "aero" | "sage" | "dusk" | "evil" | "pastel";
 
 export const THEME_META: Record<Theme, { label: string; bg: string; primary: string; description: string }> = {
   silk: {
@@ -20,6 +20,36 @@ export const THEME_META: Record<Theme, { label: string; bg: string; primary: str
     bg: "#282828",
     primary: "#d79921",
     description: "Warme Retro-Palette",
+  },
+  aero: {
+    label: "Aero",
+    bg: "#EEF1FF",
+    primary: "#B1B2FF",
+    description: "Sanftes Blau-Lavendel",
+  },
+  sage: {
+    label: "Sage",
+    bg: "#F8EDE3",
+    primary: "#798777",
+    description: "Natürlich, warm, grün",
+  },
+  dusk: {
+    label: "Dusk",
+    bg: "#355C7D",
+    primary: "#F67280",
+    description: "Dunkler Sonnenuntergang",
+  },
+  evil: {
+    label: "Evil",
+    bg: "#000000",
+    primary: "#FF0000",
+    description: "Dunkel, rot, intensiv",
+  },
+  pastel: {
+    label: "Pastel",
+    bg: "#F1F1F6",
+    primary: "#BE9FE1",
+    description: "Weiches Lila, verspielt",
   },
 };
 
