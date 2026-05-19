@@ -1,6 +1,6 @@
 [package]
 name = "sekai"
-version = "0.2.2"
+version = "0.3.0"
 description = "Sekai - Multi-Tool Desktop App"
 authors = ["Noah Buchs"]
 edition = "2021"
