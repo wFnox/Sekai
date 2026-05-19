@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Sekai",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "identifier": "Sekai-app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -26,6 +26,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
