@@ -30,7 +30,7 @@ export function NoteDialog({ open, onSave, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") onClose(); }}>
         <DialogHeader>
           <DialogTitle>Note hinzufügen</DialogTitle>
         </DialogHeader>

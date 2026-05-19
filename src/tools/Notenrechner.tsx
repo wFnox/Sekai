@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppStore, weightedAvg, neededGrade, exportCsv } from "../store";
 import { FachDialog } from "../components/FachDialog";
 import { NoteDialog } from "../components/NoteDialog";
 import { cn } from "../lib/utils";
+import { useToast } from "../lib/toast";
+import { useConfirm } from "../lib/confirm";
 import type { Semester } from "../types";
+
+type SortField = "note" | "gewicht" | "semester";
+type SortDir = "asc" | "desc";
 
 const PASS = 4.0;
 
@@ -22,6 +27,8 @@ function GradeBadge({ value }: { value: number }) {
 
 export default function Notenrechner() {
   const { data, addFach, deleteFach, updateZiel, addNote, deleteNote } = useAppStore();
+  const { toast } = useToast();
+  const { confirm } = useConfirm();
   const [selected, setSelected] = useState<string | null>(null);
   const [semFilter, setSemFilter] = useState<string>("Alle");
   const [calcWeight, setCalcWeight] = useState("1");
@@ -30,15 +37,49 @@ export default function Notenrechner() {
   const [showEditZiel, setShowEditZiel] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
   const [selNote, setSelNote] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState<SortField>("note");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const faecher = data.faecher;
   const fachInfo = selected ? faecher[selected] : null;
 
   const filteredNoten = fachInfo
-    ? semFilter === "Alle"
-      ? fachInfo.noten
-      : fachInfo.noten.filter((n) => n.semester === (semFilter as Semester))
+    ? (semFilter === "Alle" ? fachInfo.noten : fachInfo.noten.filter((n) => n.semester === (semFilter as Semester)))
+        .filter((n) => !search || n.beschreibung.toLowerCase().includes(search.toLowerCase()) || String(n.note).includes(search))
+        .slice()
+        .sort((a, b) => {
+          const mul = sortDir === "asc" ? 1 : -1;
+          if (sortField === "note") return (a.note - b.note) * mul;
+          if (sortField === "gewicht") return (a.gewicht - b.gewicht) * mul;
+          return a.semester.localeCompare(b.semester) * mul;
+        })
     : [];
+
+  async function handleDeleteFach() {
+    if (!selected) return;
+    const ok = await confirm({ title: "Fach löschen", message: `"${selected}" und alle Noten wirklich löschen?`, confirmLabel: "Löschen", danger: true });
+    if (ok) { deleteFach(selected); setSelected(null); toast("Fach gelöscht"); }
+  }
+
+  async function handleDeleteNote() {
+    if (selNote === null || !selected) return;
+    const ok = await confirm({ title: "Note löschen", message: "Diese Note wirklich löschen?", confirmLabel: "Löschen", danger: true });
+    if (ok) { deleteNote(selected, selNote); setSelNote(null); toast("Note gelöscht"); }
+  }
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("asc"); }
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Delete" && selNote !== null) handleDeleteNote();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selNote, selected]);
 
   function handleCalc() {
     if (!fachInfo || !selected) return;
@@ -115,13 +156,9 @@ export default function Notenrechner() {
             Fach
           </button>
           <button
-            onClick={() => {
-              if (selected && confirm(`"${selected}" wirklich löschen?`)) {
-                deleteFach(selected);
-                setSelected(null);
-              }
-            }}
-            className="py-2.5 px-3 rounded-xl neo-raised text-destructive flex items-center justify-center hover:opacity-80 transition-opacity"
+            onClick={handleDeleteFach}
+            disabled={!selected}
+            className="py-2.5 px-3 rounded-xl neo-raised text-destructive flex items-center justify-center hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>delete</span>
           </button>
@@ -181,7 +218,17 @@ export default function Notenrechner() {
 
             <div className="neo-raised rounded-2xl p-6 flex flex-col gap-5 flex-shrink-0">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
+                <div className="relative flex-1 max-w-xs">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" style={{ fontSize: "17px" }}>search</span>
+                  <input
+                    type="text"
+                    placeholder="Suchen..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full neo-pressed rounded-xl py-2 pl-9 pr-4 text-sm text-foreground border-none focus:outline-none bg-background"
+                  />
+                </div>
+              <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground hidden sm:block">Semester:</span>
                   <div className="relative">
                     <select
@@ -219,9 +266,14 @@ export default function Notenrechner() {
                     <thead>
                       <tr className="text-muted-foreground text-xs font-semibold border-b border-border/40">
                         <th className="py-4 px-5 w-12 text-center">#</th>
-                        <th className="py-4 px-5">Note</th>
-                        <th className="py-4 px-5">Gewicht</th>
-                        <th className="py-4 px-5">Semester</th>
+                        {(["note", "gewicht", "semester"] as SortField[]).map((f) => (
+                          <th key={f} className="py-4 px-5 cursor-pointer hover:text-foreground transition-colors" onClick={() => toggleSort(f)}>
+                            <span className="flex items-center gap-1">
+                              {f === "note" ? "Note" : f === "gewicht" ? "Gewicht" : "Semester"}
+                              {sortField === f && <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>{sortDir === "asc" ? "arrow_upward" : "arrow_downward"}</span>}
+                            </span>
+                          </th>
+                        ))}
                         <th className="py-4 px-5">Beschreibung</th>
                       </tr>
                     </thead>
@@ -263,7 +315,7 @@ export default function Notenrechner() {
                     Note hinzufügen
                   </button>
                   <button
-                    onClick={() => { if (selNote !== null) { deleteNote(selected, selNote); setSelNote(null); } }}
+                    onClick={handleDeleteNote}
                     disabled={selNote === null}
                     className={cn(
                       "px-5 py-2.5 rounded-xl neo-raised text-destructive font-medium text-sm flex items-center gap-2 transition-opacity",
@@ -272,6 +324,7 @@ export default function Notenrechner() {
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>delete</span>
                     Note löschen
+                    {selNote !== null && <span className="text-xs text-muted-foreground ml-1">(Entf)</span>}
                   </button>
                 </div>
                 {filtAvg != null && (

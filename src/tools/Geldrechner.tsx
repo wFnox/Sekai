@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useGeldStore, exportGeldCsv, budgetPeriodeStart } from "../geldStore";
+import { useToast } from "../lib/toast";
+import { useConfirm } from "../lib/confirm";
 import { cn } from "../lib/utils";
 import type { Eintrag } from "../types";
 import {
@@ -69,7 +71,7 @@ function AddEintragDialog({ open, kategorien, onSave, onClose }: {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 neo-raised rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4">
         <div className="flex items-center justify-between">
@@ -174,14 +176,21 @@ function AddEintragDialog({ open, kategorien, onSave, onClose }: {
 
 // ── Tab: Einträge ─────────────────────────────────────────────────────────────
 
+type GeldSortField = "datum" | "betrag" | "kategorie";
+type SortDir = "asc" | "desc";
+
 function EintraegeTab() {
   const { data, deleteEintrag, addEintrag } = useGeldStore();
+  const { toast } = useToast();
+  const { confirm } = useConfirm();
   const [showAdd, setShowAdd] = useState(false);
   const [selIdx, setSelIdx] = useState<number | null>(null);
   const [filterTyp, setFilterTyp] = useState("Alle");
   const [filterKat, setFilterKat] = useState("Alle");
   const [filterMonat, setFilterMonat] = useState("Alle");
   const [suche, setSuche] = useState("");
+  const [sortField, setSortField] = useState<GeldSortField>("datum");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const { eintraege, einstellungen } = data;
   const w = einstellungen.waehrung;
@@ -196,6 +205,7 @@ function EintraegeTab() {
   }, [einstellungen]);
 
   const filtered = useMemo(() => {
+    const mul = sortDir === "asc" ? 1 : -1;
     return eintraege
       .map((e, i) => ({ e, i }))
       .filter(({ e }) => {
@@ -205,8 +215,31 @@ function EintraegeTab() {
         if (suche && !e.beschreibung.toLowerCase().includes(suche.toLowerCase()) && !e.kategorie.toLowerCase().includes(suche.toLowerCase())) return false;
         return true;
       })
-      .reverse();
-  }, [eintraege, filterTyp, filterKat, filterMonat, suche]);
+      .sort((a, b) => {
+        if (sortField === "datum") return a.e.datum.localeCompare(b.e.datum) * mul;
+        if (sortField === "betrag") return (a.e.betrag - b.e.betrag) * mul;
+        return a.e.kategorie.localeCompare(b.e.kategorie) * mul;
+      });
+  }, [eintraege, filterTyp, filterKat, filterMonat, suche, sortField, sortDir]);
+
+  function toggleSort(field: GeldSortField) {
+    if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("desc"); }
+  }
+
+  async function handleDeleteEintrag() {
+    if (selIdx === null) return;
+    const ok = await confirm({ title: "Eintrag löschen", message: "Diesen Eintrag wirklich löschen?", confirmLabel: "Löschen", danger: true });
+    if (ok) { deleteEintrag(selIdx); setSelIdx(null); toast("Eintrag gelöscht"); }
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Delete" && selIdx !== null) handleDeleteEintrag();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selIdx]);
 
   const monatEinnahmen = useMemo(() => {
     const m = new Date().toISOString().slice(0, 7);
@@ -291,10 +324,15 @@ function EintraegeTab() {
             <table className="w-full text-left">
               <thead className="sticky top-0 bg-background z-10">
                 <tr className="text-muted-foreground text-xs font-semibold border-b border-border/40">
-                  <th className="py-4 px-5">Datum</th>
+                  {(["datum", "betrag", "kategorie"] as GeldSortField[]).map((f) => (
+                    <th key={f} className="py-4 px-5 cursor-pointer hover:text-foreground transition-colors" onClick={() => toggleSort(f)}>
+                      <span className="flex items-center gap-1">
+                        {f === "datum" ? "Datum" : f === "betrag" ? "Betrag" : "Kategorie"}
+                        {sortField === f && <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>{sortDir === "asc" ? "arrow_upward" : "arrow_downward"}</span>}
+                      </span>
+                    </th>
+                  ))}
                   <th className="py-4 px-5">Typ</th>
-                  <th className="py-4 px-5">Kategorie</th>
-                  <th className="py-4 px-5">Betrag</th>
                   <th className="py-4 px-5">Beschreibung</th>
                 </tr>
               </thead>
@@ -311,14 +349,14 @@ function EintraegeTab() {
                       )}
                     >
                       <td className="py-3 px-5 text-muted-foreground text-xs">{e.datum}</td>
+                      <td className={cn("py-3 px-5 font-semibold text-sm", e.typ === "Einnahme" ? "text-green-500" : "text-destructive")}>
+                        {e.typ === "Einnahme" ? "+" : "−"}{formatBetrag(e.betrag, w)}
+                      </td>
+                      <td className="py-3 px-5 text-muted-foreground text-xs">{e.kategorie}</td>
                       <td className="py-3 px-5">
                         <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-lg", e.typ === "Einnahme" ? "text-green-500 bg-green-500/10" : "text-destructive bg-destructive/10")}>
                           {e.typ}
                         </span>
-                      </td>
-                      <td className="py-3 px-5 text-muted-foreground text-xs">{e.kategorie}</td>
-                      <td className={cn("py-3 px-5 font-semibold text-sm", e.typ === "Einnahme" ? "text-green-500" : "text-destructive")}>
-                        {e.typ === "Einnahme" ? "+" : "−"}{formatBetrag(e.betrag, w)}
                       </td>
                       <td className="py-3 px-5 text-muted-foreground truncate max-w-xs">{e.beschreibung}</td>
                     </tr>
@@ -331,13 +369,13 @@ function EintraegeTab() {
         {selIdx !== null && (
           <div className="border-t border-border px-5 py-3 flex items-center gap-3 flex-shrink-0">
             <button
-              onClick={() => { deleteEintrag(selIdx); setSelIdx(null); }}
+              onClick={handleDeleteEintrag}
               className="px-4 py-2 rounded-xl neo-raised text-destructive font-medium text-sm flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
               <span className="material-symbols-outlined" style={{ fontSize: "17px" }}>delete</span>
               Eintrag löschen
+              <span className="text-xs text-muted-foreground">(Entf)</span>
             </button>
-            <span className="text-xs text-muted-foreground">Eintrag #{selIdx + 1} ausgewählt</span>
           </div>
         )}
       </div>

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore } from "./store";
 import { useTheme } from "./useTheme";
 import { cn } from "./lib/utils";
@@ -65,7 +66,7 @@ function Sidebar({
   return (
     <aside
       className={cn(
-        "flex flex-col neo-raised rounded-2xl flex-shrink-0 overflow-hidden transition-all duration-200 ease-in-out",
+        "flex flex-col neo-raised rounded-2xl flex-shrink-0 overflow-hidden transition-all duration-200 ease-in-out flex-1",
         expanded ? "w-52" : "w-14"
       )}
     >
@@ -114,6 +115,45 @@ function Sidebar({
   );
 }
 
+// ── Window controls ───────────────────────────────────────────────────────────
+
+function WindowControls() {
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    const win = getCurrentWindow();
+    win.isMaximized().then(setIsMaximized);
+    let unlisten: (() => void) | undefined;
+    win.onResized(() => win.isMaximized().then(setIsMaximized)).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
+  }, []);
+
+  return (
+    <div className="flex items-center gap-1 flex-shrink-0 z-10 relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); getCurrentWindow().minimize(); }}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:neo-raised-sm transition-all"
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>remove</span>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); getCurrentWindow().toggleMaximize(); }}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:neo-raised-sm transition-all"
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
+          {isMaximized ? "fullscreen_exit" : "fullscreen"}
+        </span>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); getCurrentWindow().close(); }}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:neo-raised-sm transition-all"
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>close</span>
+      </button>
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -122,6 +162,7 @@ export default function App() {
 
   const [active, setActive] = useState<ToolKey>("notenrechner");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (!ready) {
     return (
@@ -137,23 +178,42 @@ export default function App() {
     einstellungen: "Einstellungen",
   };
 
+  function handleSidebarMouseEnter() {
+    if (sidebarExpanded) return;
+    hoverTimer.current = setTimeout(() => setSidebarExpanded(true), 600);
+  }
+
+  function handleSidebarMouseLeave() {
+    if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
+    setSidebarExpanded(false);
+  }
+
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden p-4 gap-4">
-      <Sidebar
-        active={active}
-        setActive={setActive}
-        expanded={sidebarExpanded}
-        setExpanded={setSidebarExpanded}
-      />
+      <div
+        className="flex flex-col h-full"
+        onMouseEnter={handleSidebarMouseEnter}
+        onMouseLeave={handleSidebarMouseLeave}
+      >
+        <Sidebar
+          active={active}
+          setActive={setActive}
+          expanded={sidebarExpanded}
+          setExpanded={setSidebarExpanded}
+        />
+      </div>
 
       {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0 gap-4">
-        {/* Breadcrumb header */}
-        <header className="neo-raised rounded-2xl px-5 py-3 flex items-center gap-3 flex-shrink-0">
+        {/* Titlebar / header */}
+        <header className="neo-raised rounded-2xl px-5 py-3 flex items-center gap-3 flex-shrink-0 select-none">
           <span className="material-symbols-outlined text-primary" style={{ fontSize: "20px" }}>
             {active === "notenrechner" ? "school" : active === "geldrechner" ? "payments" : "settings"}
           </span>
-          <h1 className="font-semibold text-foreground text-sm">{toolLabels[active]}</h1>
+          <div data-tauri-drag-region className="flex-1 cursor-move">
+            <h1 className="font-semibold text-foreground text-sm pointer-events-none">{toolLabels[active]}</h1>
+          </div>
+          <WindowControls />
         </header>
 
         {/* Tool area */}
