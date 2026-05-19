@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/* ── Default theme (Silk - light neomorphic) ── */
+@theme {
+  --color-background: #e8eaf0;
+  --color-foreground: #2e3040;
+  --color-card: #e8eaf0;
+  --color-card-foreground: #2e3040;
+  --color-popover: #e8eaf0;
+  --color-popover-foreground: #2e3040;
+  --color-primary: #6366f1;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #dcdee4;
+  --color-secondary-foreground: #2e3040;
+  --color-muted: #dcdee4;
+  --color-muted-foreground: #585a68;
+  --color-accent: #dcdee4;
+  --color-accent-foreground: #2e3040;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #d0d2dc;
+  --color-input: #e8eaf0;
+  --color-ring: #6366f1;
+  --radius: 0.75rem;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+@layer base {
+  /* ── Neo shadow variables (overridden per theme) ── */
+  :root {
+    --neo-raised: 6px 6px 12px rgba(0, 0, 0, 0.08), -6px -6px 12px rgba(255, 255, 255, 0.6);
+    --neo-pressed: inset 4px 4px 8px rgba(0, 0, 0, 0.06), inset -4px -4px 8px rgba(255, 255, 255, 0.5);
+    --neo-raised-sm: 3px 3px 6px rgba(0, 0, 0, 0.08), -3px -3px 6px rgba(255, 255, 255, 0.6);
+  }
+
+  /* ── Dark theme ── */
+  [data-theme="dark"] {
+    --color-background: #242837;
+    --color-foreground: #c8cde8;
+    --color-card: #242837;
+    --color-card-foreground: #c8cde8;
+    --color-popover: #242837;
+    --color-popover-foreground: #c8cde8;
+    --color-primary: #818cf8;
+    --color-primary-foreground: #1e2030;
+    --color-secondary: #2e3248;
+    --color-secondary-foreground: #c8cde8;
+    --color-muted: #2e3248;
+    --color-muted-foreground: #8b8fa8;
+    --color-accent: #2e3248;
+    --color-accent-foreground: #c8cde8;
+    --color-destructive: #f87171;
+    --color-destructive-foreground: #1e2030;
+    --color-border: #394060;
+    --color-input: #242837;
+    --color-ring: #818cf8;
+
+    --neo-raised: 5px 5px 10px #181c27, -5px -5px 10px #303650;
+    --neo-pressed: inset 5px 5px 10px #181c27, inset -5px -5px 10px #303650;
+    --neo-raised-sm: 3px 3px 6px #181c27, -3px -3px 6px #303650;
+  }
+
+  /* ── Gruvbox theme ── */
+  [data-theme="gruvbox"] {
+    --color-background: #282828;
+    --color-foreground: #ebdbb2;
+    --color-card: #282828;
+    --color-card-foreground: #ebdbb2;
+    --color-popover: #282828;
+    --color-popover-foreground: #ebdbb2;
+    --color-primary: #d79921;
+    --color-primary-foreground: #282828;
+    --color-secondary: #3c3836;
+    --color-secondary-foreground: #ebdbb2;
+    --color-muted: #3c3836;
+    --color-muted-foreground: #a89984;
+    --color-accent: #3c3836;
+    --color-accent-foreground: #ebdbb2;
+    --color-destructive: #fb4934;
+    --color-destructive-foreground: #282828;
+    --color-border: #504945;
+    --color-input: #282828;
+    --color-ring: #d79921;
+
+    --neo-raised: 5px 5px 10px #161514, -5px -5px 10px #3a3634;
+    --neo-pressed: inset 5px 5px 10px #161514, inset -5px -5px 10px #3a3634;
+    --neo-raised-sm: 3px 3px 6px #161514, -3px -3px 6px #3a3634;
+  }
+
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 14px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted-foreground);
+  }
+}
+
+@layer utilities {
+  .neo-raised {
+    box-shadow: var(--neo-raised);
+    background-color: var(--color-background);
+  }
+  .neo-pressed {
+    box-shadow: var(--neo-pressed);
+    background-color: var(--color-background);
+  }
+  .neo-raised-sm {
+    box-shadow: var(--neo-raised-sm);
+    background-color: var(--color-background);
+  }
+}
