@@ -25,14 +25,8 @@ export default function Settings() {
       const available = await invoke<boolean>("check_for_updates");
       setUpdateStatus(available ? "available" : "up-to-date");
     } catch (e) {
-      const msg = String(e);
-      // No release published yet → treat as up to date
-      if (msg.includes("fetch") || msg.includes("JSON") || msg.includes("404") || msg.includes("remote")) {
-        setUpdateStatus("up-to-date");
-      } else {
-        setUpdateError(msg);
-        setUpdateStatus("error");
-      }
+      setUpdateError(String(e));
+      setUpdateStatus("error");
     }
   }
 
