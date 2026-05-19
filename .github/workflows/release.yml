@@ -9,14 +9,7 @@ jobs:
   release:
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: windows-latest
-            args: '--target x86_64-pc-windows-msvc'
-
-    runs-on: ${{ matrix.platform }}
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -50,11 +43,12 @@ jobs:
           releaseName: 'Sekai ${{ github.ref_name }}'
           releaseBody: |
             ## Was ist neu?
-            Siehe [CHANGELOG](https://github.com/wFnox/Sekai/commits/main) für alle Änderungen.
+            Siehe [Commits](https://github.com/wFnox/Sekai/commits/main) für alle Änderungen.
 
             ## Installation
-            Lade die `.msi` Datei herunter und führe sie aus.
+            Lade die `.msi` oder `.exe` Datei herunter und führe sie aus.
             Bestehende Installationen werden automatisch aktualisiert.
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
+          updaterJsonPreferNsis: true
+          args: --target x86_64-pc-windows-msvc

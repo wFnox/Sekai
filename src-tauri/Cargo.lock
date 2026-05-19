@@ -3091,7 +3091,7 @@ dependencies = [
 
 [[package]]
 name = "sekai"
-version = "0.2.2"
+version = "0.3.2"
 dependencies = [
  "serde",
  "serde_json",
